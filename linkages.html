@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Linkages</title>
+	<style>
+		table, tr, th, td {
+			border: 1px solid grey;
+			border-collapse: collapse;
+		}
+		th, td {
+			padding: 3px 5px 3px 5px;
+		}
+		button.depressed {
+			background-color: #fafafa;
+			border-style: inset;
+			border-radius: 3px;
+			border-width: thin;
+			padding-top: 2px;
+			padding-bottom: 2px;
+			}
+		button.unpressed {
+			background-color: #efefef;
+			border-style: outset;
+			border-radius: 3px;
+			border-width: thin;
+			padding-top: 2px;
+			padding-bottom: 2px;
+		}
+	</style>
+  </head>
+
+  <body>
+	  <div style="float: left; width: 100%;">
+		  <p style="float: left; width: 100%; text-align: center; font-size: 24pt; margin: 15px;">
+		  	Mechanical Linkage Simulator
+		  </p>
+		  <p style="float: left; width: 100%; text-align: center;">
+			  From simple from 4-bar linkages to more complex mechanisms.
+		  </p>
+		  <hr>
+	  </div>
+	  <div style="float: left; width: 100%;">
+		  <div style="float: left; width: 700px; margin-top: 10px;">
+			  <div style="float: left; width: 100%;">
+				  <div id="inputs" style="float: left;">
+					  <div id="addInputs" style="float: left;">
+						  <div class='pointInput' style="float: left; margin-left: 5px; border: 1px;">Add: &nbsp;</div>
+						  <button id='fixed' class="unpressed">Fixed Point</button>
+						  <button id='rotor' class="unpressed">Rotor Arm</button>
+						  <button id='move' class="unpressed">Moving Arm</button>
+					  </div>
+				  </div>
+				  <div id="addMech" style="float: right; margin-right: 10px;">
+					  <span id="mechsLabel" style="float: left; margin-left: 5px;">Add linkage:</span>
+					  <select name="mechs" id="mechs" style="float: left; margin-left: 5px;">
+						  <option value="">Choose...</option>
+					  </select>
+					  <button id="remove" style="float: left; margin-left: 5px; display: none">Remove</button>
+				  </div>
+			  </div>
+			  <div id="inst" style="float: left; width: 100%; margin-top: 10px; margin-bottom: 10px;">Add a Fixed Point to get started. Or choose from an existing linkage.</div>
+		  </div>
+		  <div style="float: left; margin-top: 10px; margin-left: 10px;">
+			  <button id="run">Run</button>
+			  <button id="restart">Reset</button>
+			  <button id="tick">Tick</button>
+			  <input type="text" id="deg" style="width: 30px;"> Degrees
+		  </div>
+	  </div>
+	  <canvas id="mech" width=700 height=700 style="border: 1px solid black; margin-top: 5px; float:left;">
+		  Some starting text
+	  </canvas>
+	  <div id='statusHeader' style="float: left; margin-left: 10px; width: 500px;">
+		  <strong>Status:</strong>
+		  <div id='status' style="float: left; width: 100%;"></div>
+		  <br><br><br>
+		  <div id='points' style="float: left; width: 100%;">
+			  <table id='table'>
+				  <tr>
+					  <th>Label</th>
+					  <th>X</th>
+					  <th>Y</th>
+					  <th>Type</th>
+					  <th>Arm 1</th>
+					  <th>Arm 2</th>
+					  <th>Path</th>
+					  <th>Delete</th>
+				  </tr>
+			  </table>
+		  </div>
+	  </div>
+	  <div id='pos' style="float: left; width:100%;">Mouse position</div>
+
+  </body>
+
+    <script src='linkages.js'></script>
+</html>
