@@ -144,7 +144,7 @@ document.getElementById('deg').value = runDegree;
 let intTime = 20;
 let interval = null;
 let armFirstPoint = {'existing': null, 'point': null};
-let mechs = {};
+let liveMech = false;
 let paths = {};
 
 // (x,y) -> +x moves right
@@ -561,7 +561,7 @@ function updateInputting(e) {
 			addMove.disabled = true;
 			updateStatus('status', {'adding': {'type': 'rotor', 'order': 1}});
 		} else if (e.target.id === "move") {
-			inst.innerHTML = "First click to place a new point or choose an existing point. Then choose an existing point to create the arm";
+			inst.innerHTML = "Connect 2 points. Click anywhere to create new point.";
 			addFixed.disabled = true;
 			addRotor.disabled = true;
 			updateStatus('status', {'adding': {'type': 'move', 'order': 1}});
@@ -593,6 +593,15 @@ function finishAdding() {
 	});
 	drawPoints();
 	updateTable();
+}
+
+function enableRemoveMechButton(name = '') {
+	liveMech = true;
+	document.getElementById('mechs').style.display = 'none';
+	mechsLabel.style.display = 'none';
+	mechRemove.innerText = "Remove "+name;
+	mechRemove.value = name === '' ? 'default' : name;
+	mechRemove.style.display = 'block';
 }
 
 function handleRemoveMech(e) {
@@ -679,7 +688,7 @@ canvas.addEventListener('click', function(e) {
 			// type = 'fixed';
 			if (point === null) {
 				console.log("in fixed");
-				addPoint(click.x, click.y, type);
+				addPoint(click.x, click.y, type, 'default');
 				drawPoints();
 				updateStatus('status', {'stopped': true});
 				resetButtonsAndStatus(type);
@@ -690,7 +699,7 @@ canvas.addEventListener('click', function(e) {
 				console.log("adding arm 1st point");
 				if (point === null) {
 					// add point
-					armFirstPoint.point = addPoint(click.x, click.y, type);
+					armFirstPoint.point = addPoint(click.x, click.y, type, 'default');
 					armFirstPoint.existing = false;
 				} else if (!(point.type === 'move' && type === 'rotor')) {
 					console.log("IN", point.label, point.type);
@@ -709,7 +718,7 @@ canvas.addEventListener('click', function(e) {
 				if (point === null) {
 					if (!(armFirstPoint.point.type === 'move' && type === 'rotor')) {
 						if (armFirstPoint.existing) {
-							point = addPoint(click.x, click.y, type);
+							point = addPoint(click.x, click.y, type, 'default');
 						} else {
 							console.log("can't add null to null");
 						}
@@ -805,6 +814,7 @@ var jensen = [];
 function addPoint(x, y, type, name) {
 	let newPoint = new Point(x, y, pointsArr.length, type, name);
 	pointsArr.push(newPoint);
+	enableRemoveMechButton();
 	if (type === 'rotor') {
 		rotor = newPoint;
 		if (armFirstPoint.point != null) {
@@ -916,7 +926,7 @@ function removePoint(pointLabel) {
 	updateTable();
 }
 
-function removeMech(name) {
+function removeMech(name = 'default') {
 	// get index in pointsArr (because it is changing)
 	pointsArr.forEach((point, index, obj) => {
 		if (point.mechName === name) {
@@ -941,7 +951,6 @@ function removeMech(name) {
 		}
 	});
 	deletePointsArrNulls();
-	delete mechs[name];
 	drawPoints();
 	updateTable();
 }
@@ -966,26 +975,21 @@ function loadMech(e) {
 	let name = e.srcElement[e.srcElement.selectedIndex].value;
 	console.log(name);
 	mechFromArr(name);
-	mechRemove.innerText = "Remove "+name;
-	e.srcElement.style.display = 'none'
-	mechsLabel.style.display = 'none';
-	mechRemove.value = name;
-	mechRemove.style.display = 'block';
+	enableRemoveMechButton(name);
 }
-
 
 function mechFromArr(name) {
 	let newMech = JSON.parse(savedMechs[name]);
-	mechs[name] = [];
+	let mechs = [];
 	// Create poins
 	newMech.forEach(mech => {
 		let pnt = addPoint(mech.x, mech.y, mech.type, name);
-		mechs[name].push(pnt.label);
-		if (mech.a != null && mech.a < mechs[name].length) {
+		mechs.push(pnt.label);
+		if (mech.a != null && mech.a < mechs.length) {
 			//console.log("mech.a:", mech.a);
 			addArm(pointsArr[mech.a], pnt);
 		}
-		if (mech.b != null && mech.b < mechs[name].length) {
+		if (mech.b != null && mech.b < mechs.length) {
 			//console.log("mech.b:", mech.b);
 			addArm(pointsArr[mech.b], pnt);
 		}
