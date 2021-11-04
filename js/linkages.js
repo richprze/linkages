@@ -109,7 +109,6 @@ class Arm {
 	}
 }
 
-
 /********************************************
  *
  * Global variables
@@ -125,6 +124,7 @@ let inst = document.getElementById("inst");
 let old_inst = null;
 let add = document.getElementById('add');
 let pos = document.getElementById('pos');
+let len = document.getElementById('len');
 let UIStatus = document.getElementById('status');
 let rotor = null;
 let degs = 0;
@@ -142,10 +142,13 @@ let mouseDownPos = null;
 let runDegree = 1;
 document.getElementById('deg').value = runDegree;
 let intTime = 20;
+let speed = 50; // deg / second
+document.getElementById('speed').value = speed;
 let interval = null;
 let armFirstPoint = {'existing': null, 'point': null};
 let liveMech = false;
 let paths = {};
+let oldPaths = [];
 
 // (x,y) -> +x moves right
 // 		 -> +y moves down
@@ -168,9 +171,16 @@ mechRemove.addEventListener('click', handleRemoveMech);
 addFixed.addEventListener('click', updateInputting);
 addRotor.addEventListener('click', updateInputting);
 addMove.addEventListener('click', updateInputting);
+const undo = document.getElementById('undo');
+const redo = document.getElementById('redo');
+undo.addEventListener('click', handleNavHistory);
+redo.addEventListener('click', handleNavHistory);
+const speedInput = document.getElementById('speed');
+speedInput.addEventListener('change', updateSpeed);
 
 const savedMechs = {
 	'jensen': '[{"x":350,"y":350,"a":2,"b":null,"type":"fixed","rotateFrom":null},{"x":274,"y":334.4,"a":3,"b":4,"type":"fixed","rotateFrom":null},{"x":379.34,"y":356.24,"a":0,"b":3,"type":"rotor","rotateFrom":0},{"x":297.68,"y":413.95,"a":2,"b":1,"type":"move","rotateFrom":null},{"x":300.83,"y":260.52,"a":1,"b":2,"type":"move","rotateFrom":null},{"x":198.79,"y":362.23,"a":1,"b":3,"type":"move","rotateFrom":null},{"x":234.52,"y":292.01,"a":4,"b":5,"type":"move","rotateFrom":null},{"x":273.32,"y":166.46,"a":4,"b":6,"type":"move","rotateFrom":null}]',
+	//'lambda': '[{"x":300,"y":300,"a":3,"b":null,"type":"fixed","rotateFrom":null},{"x":340","y"300","a":2,"b":null,"type":"fixed","rotateFrom":null},{"x":360,"y":300,"a":1,"b":3,"type":"rotor","rotateFrom":1},{"x":330,"y":340,"a":0,"b":2,"type":"move","rotateFrom":null},{"x":300,"y":380,"a"'
 	'test': '[{"x":196,"y":286,"a":3,"b":null,"type":"fixed","rotateFrom":null},{"x":313,"y":291,"a":2,"b":null,"type":"fixed","rotateFrom":null},{"x":274.40247371306754,"y":331.990620445775,"a":1,"b":3,"type":"rotor","rotateFrom":1},{"x":227.34753709875397,"y":446.2352393134614,"a":2,"b":0,"type":"move","rotateFrom":null}]',
 	'kite': '[{"x":310,"y":441,"a":2,"b":null,"type":"fixed","rotateFrom":null},{"x":310,"y":370,"a":3,"b":4,"type":"fixed","rotateFrom":null},{"x":310,"y":419,"a":0,"b":4,"type":"rotor","rotateFrom":0},{"x":390,"y":370,"a":1,"b":2,"type":"move","rotateFrom":null},{"x":230,"y":370,"a":1,"b":2,"type":"move","rotateFrom":null},{"x":310,"y":270,"a":3,"b":4,"type":"move","rotateFrom":null}]',
 	'kite_half_1_pnt': '[{"x":310,"y":441,"a":2,"b":null,"type":"fixed","rotateFrom":null},{"x":310,"y":370,"a":3,"b":4,"type":"fixed","rotateFrom":null},{"x":294.17452439254964,"y":425.71751584990204,"a":0,"b":3,"type":"rotor","rotateFrom":0},{"x":384.29750278377696,"y":399.66278948606583,"a":1,"b":2,"type":"move","rotateFrom":null},{"x":231.20287672528005,"y":356.1792415682572,"a":1,"b":2,"type":"move","rotateFrom":null},{"x":421.37598964135924,"y":306.79091100634463,"a":1,"b":3,"type":"move","rotateFrom":null},{"x":248.47882476495852,"y":257.6828374748573,"a":1,"b":4,"type":"move","rotateFrom":null},{"x":359.8548144063177,"y":194.47374848120194,"a":6,"b":5,"type":"move","rotateFrom":null}]',
@@ -293,6 +303,18 @@ function drawPaths() {
 			drawArmLine();
 		}
 	}
+	oldPaths.forEach(path => {
+		ctx.strokeStyle='grey';
+		ctx.beginPath();
+		path.forEach((v, k) => {
+			if (k === 0) {
+				ctx.moveTo(v.x, v.y);
+			} else {
+				ctx.lineTo(v.x, v.y);
+			}
+		});
+		ctx.stroke();
+	})
 }
 
 function drawArmLine() {
@@ -346,6 +368,9 @@ function try360() {
 	if (errors.size > 0) {
 		console.log("ERROR when checking. Points with fail: " + [...errors].join());
 		sys.errorPoints = [...errors];
+		// TODO: Better error alerting
+		// Highlight row in red in addition to highlighting points
+		// Display an error message?
 		drawPoints();
 	} else {
 		console.log("Check -> no errors");
@@ -377,6 +402,14 @@ function restart(e) {
 	paths = {};
 	drawPoints();
 	updateTable();
+}
+
+function updateSpeed() {
+	speed = parseInt(speedInput.value);
+	if (sys.status.running) {
+		window.clearInterval(interval);
+		interval = window.setInterval(tick, (360/speed*1000)/360);
+	}
 }
 
 function run(event) {
@@ -413,7 +446,9 @@ function run(event) {
 			drawPoints();
 			updateTable();
 			updateStatus('status', {'running': true});
-			interval = window.setInterval(tick, intTime)
+			//interval = window.setInterval(tick, intTime);
+			speed = parseInt(speedInput.value);
+			interval = window.setInterval(tick, (360/speed*1000)/360);
 			tickit.disabled = true;
 			restartit.disabled = true;
 			addFixed.disabled = true;
@@ -471,7 +506,7 @@ function updateTable() {
 
 	// add header
 	let newRow = table.insertRow();
-	newRow.innerHTML = "<th>Label</th><th>X</th><th>Y</th><th>Type</th><th>Arm 1</th><th>Arm 2</th><th>Path</th><th>Delete</th>";
+	newRow.innerHTML = "<th>#</th><th>X</th><th>Y</th><th>Type</th><th>Arm 1</th><th>Arm 2</th><th>Path</th><th>Edit</th>";
 
 	// add rows per point
 	pointsArr.forEach(point => {
@@ -483,9 +518,9 @@ function updateTable() {
 		newCell = newRow.insertCell();
 		newCell.innerText = point.label;
 		newCell = newRow.insertCell();
-		newCell.innerText = point.x.toPrecision(5);
+		newCell.innerHTML = `<input type='text' class='x' id=${point.label}.x style='width: 45px;' value=${point.x.toPrecision(5)}>`;
 		newCell = newRow.insertCell();
-		newCell.innerText = point.y.toPrecision(5);
+		newCell.innerHTML = `<input type='text' class='y' id=${point.label}.y style='width: 45px;' value=${point.y.toPrecision(5)}>`;
 		newCell = newRow.insertCell();
 		newCell.innerText = point.type;
 		newCell = newRow.insertCell();
@@ -504,24 +539,23 @@ function updateTable() {
 		newCell = newRow.insertCell();
 		if (point.analyze && point.type === 'move') {
 			// selected checkbox
-			newCell.innerHTML = "<input type='checkbox' class='analyze' name='"+point.label+"' onchange='handleAnalyze()' checked>";
+			newCell.innerHTML = "<input type='checkbox' class='analyze' name='"+point.label+"' onchange='handleAnalyze(this)' checked>";
 		} else if (point.type === 'move') {
 			// unselected checkbox
 			newCell.innerHTML = "<input type='checkbox' class='analyze' name='"+point.label+"' onclick='handleAnalyze(this)'>";
 		}
 		newCell = newRow.insertCell();
-		if (sys.status.stopped) {
-			if (sys.activePoint.point === point.label) {
-				console.log("selected = point");
+		if (sys.status.stopped && sys.activePoint.point === point.label) {
 				newCell.innerHTML = "<button id='deletePoint' onclick='removePoint("+point.label+")'>Delete</button>";
-			}
+		} else {
+			newCell.innerHTML = "<button id='updatePoint' onclick='handleUpdatePoint("+point.label+")'>Update</button>";
 		}
 	});
 }
 
 function handleAnalyze(e) {
-	pointsArr[e.name].analyze = e.checked;
 	paths[e.name] = [];
+	pointsArr[e.name].analyze = e.checked;
 }
 
 function resetButtonsAndStatus(id) {
@@ -586,16 +620,17 @@ function finishAdding() {
 				sys.errorPoints.splice(index, 1);
 			}
 		}
-		if (sys.errorPoints.length === 0) {
-			console.log("trying 360");
-			try360();
-		}
 	});
+	if (sys.errorPoints.length === 0) {
+		console.log("trying 360");
+		// handle error better 
+		try360();
+	}
 	drawPoints();
 	updateTable();
 }
 
-function enableRemoveMechButton(name = '') {
+function enableRemoveMechButton(name = 'default') {
 	liveMech = true;
 	document.getElementById('mechs').style.display = 'none';
 	mechsLabel.style.display = 'none';
@@ -605,13 +640,18 @@ function enableRemoveMechButton(name = '') {
 }
 
 function handleRemoveMech(e) {
-	e.preventDefault();
+	// e.preventDefault();
 	mechRemove.style.display = 'none';
 	mechSelect.selectedIndex = 0;
 	mechSelect.style.display = 'block';
 	mechsLabel.style.display = 'block';
 	removeMech(mechRemove.value);
+	document.getElementById('history').style.display='none';
 	paths = {};
+	oldPaths = [];
+	iteration = -1;
+	currentHistory = -1;
+	history = [];
 	drawPoints();
 	mechRemove.innerText = "Remove";
 	mechRemove.value = "";
@@ -641,14 +681,13 @@ canvas.addEventListener('mousemove', e => {
 			// Could be a drag
 			if ((mouse.x - mouseDownPos.x)**2 + (mouse.y - mouseDownPos.y)**2 > 5**2) {
 				// it's a drag
-				console.log("drag");
 				if (sys.activePoint.point != null) {
 					updateStatus('activePoint', {'point': sys.activePoint.point, 'status': 'moving'});
 				} 
 				if (sys.activePoint.status === 'moving') {
-					pointsArr[sys.activePoint.point].x = mouse.x;
-					pointsArr[sys.activePoint.point].y = mouse.y;
+					updatePoint(sys.activePoint.point, mouse.x, mouse.y);
 					drawPoints();
+					pos.innerHTML = mouse.x + ", " + mouse.y;
 				}
 			}
 		}
@@ -656,7 +695,8 @@ canvas.addEventListener('mousemove', e => {
 		if (sys.status.adding) {
 			if (sys.status.adding.order === 2) {
 				drawPoints();
-				// drawArmLine();
+				let length = vectorLen({"x":mouse.x,"y":mouse.y}, armFirstPoint.point);
+				len.innerHTML = "| length: " + length;
 			}
 		}
 		let point = coordsInPoint(mouse);
@@ -689,6 +729,7 @@ canvas.addEventListener('click', function(e) {
 			if (point === null) {
 				console.log("in fixed");
 				addPoint(click.x, click.y, type, 'default');
+				addToHistory();
 				drawPoints();
 				updateStatus('status', {'stopped': true});
 				resetButtonsAndStatus(type);
@@ -716,6 +757,7 @@ canvas.addEventListener('click', function(e) {
 			} else {
 				console.log("adding arm 2nd point");
 				if (point === null) {
+					console.log("adding to null point");
 					if (!(armFirstPoint.point.type === 'move' && type === 'rotor')) {
 						if (armFirstPoint.existing) {
 							point = addPoint(click.x, click.y, type, 'default');
@@ -729,6 +771,9 @@ canvas.addEventListener('click', function(e) {
 				} else if (armFirstPoint.point.type === 'fixed' && type === 'rotor') {
 					console.log("FALSE, adding rotor from fixed to existing");
 					return false;
+				} else {
+					console.log("adding 2nd point to exisitng point");
+					console.log(point);
 				}
 
 				if (type === 'rotor') {
@@ -736,6 +781,7 @@ canvas.addEventListener('click', function(e) {
 				}
 
 				addArm(point, armFirstPoint.point);
+				addToHistory();
 
 				drawPoints();
 				armFirstPoint.point = null;
@@ -787,8 +833,8 @@ canvas.addEventListener('mouseup', e => {
 	if (sys.status.stopped) {
 		if (sys.activePoint.status === 'moving') {
 			console.log("stopped moving");
-			// calculate new arms lengths
-			Object.keys(arms).forEach(arm => { arms[arm].calcLen(); });
+			updatePoint(sys.activePoint.point, mouse.x, mouse.y);
+			addToHistory();
 			updateStatus('activePoint', {'point': null, 'status': null});
 			updateTable();
 			inst.innerHTML = old_inst;
@@ -806,6 +852,9 @@ canvas.addEventListener('mouseup', e => {
 ********************************************/
 let points = {};
 let pointsArr = [];
+let history = [];
+let iteration = -1;
+let currentHistory = -1;
 let fixed = [];
 let moves = []; // holds the points to be rotated
 let arms = {};
@@ -814,7 +863,7 @@ var jensen = [];
 function addPoint(x, y, type, name) {
 	let newPoint = new Point(x, y, pointsArr.length, type, name);
 	pointsArr.push(newPoint);
-	enableRemoveMechButton();
+	if (pointsArr.length === 1) enableRemoveMechButton(name);
 	if (type === 'rotor') {
 		rotor = newPoint;
 		if (armFirstPoint.point != null) {
@@ -825,7 +874,6 @@ function addPoint(x, y, type, name) {
 	} else {
 		moves.push(newPoint);
 	}
-	//update Point Table
 	updateTable(newPoint);
 	return newPoint;
 }
@@ -836,7 +884,7 @@ function addArm(pnt1, pnt2) {
 
 	if (pnt2.a) {
 		if (pnt2.b) {
-			console.log("WARNING: Point 1 (", pnt2.label, "): already has from A and from B");
+			console.log("WARNING: Second point", pnt2.label, "already has from A and from B");
 		} else {
 			// updating point1.b
 			pnt2.b = pnt1;
@@ -850,7 +898,7 @@ function addArm(pnt1, pnt2) {
 
 	if (pnt1.a) {
 		if (pnt1.b) {
-			console.log("WARNING: Point (", pnt1.label, "): already has from A and from B");
+			console.log("WARNING: First point", pnt1.label, "already has from A and from B");
 		} else {
 			// updating point.b
 			pnt1.b = pnt2;
@@ -864,6 +912,71 @@ function addArm(pnt1, pnt2) {
 	return arm.label;
 }
 
+function handleUpdatePoint(pointLabel) {
+	// Get x coord
+	let x = parseInt(document.getElementById(pointLabel+".x").value);
+	let y = parseInt(document.getElementById(pointLabel+".y").value);
+	updatePoint(pointLabel, x, y);
+	addToHistory();
+}
+
+function updatePoint(pointLabel, x, y) {
+	pointsArr[pointLabel].x = x;
+	pointsArr[pointLabel].y = y;
+	if (pointsArr[pointLabel].analyze) {
+		oldPaths.push(paths[pointLabel]);
+		paths[pointLabel] = [];
+	}
+	Object.keys(arms).forEach(arm => { arms[arm].calcLen(); });
+	drawPoints();
+	updateTable();
+}
+
+function handleNavHistory(e) {
+	if (e.srcElement.id === 'undo') {
+		navHistory();
+	} else {
+		navHistory(false);
+	}
+}
+
+function navHistory(back = true) {
+	if (back && iteration >= 0) {
+	// if (back && currentHistory >= 0) {
+		console.log("going back");
+		iteration -= 1;
+		if (iteration >= 0) {
+			// Remove existing mech
+			removeMech(mechRemove.value);
+			mechFromArr(history[iteration], mechRemove.value);
+		} else if (mechRemove.style.display === 'block') {
+			handleRemoveMech();
+		}
+		drawPoints(); 
+		updateTable();
+		// enable forward since we just went back
+		redo.disabled = false;
+		// disable undo if at very beginning
+		if (iteration < 0) undo.disabled = true;
+	} else if (iteration < (history.length - 1)) {
+	// } else if (currentHistory < (history.length - 2)) {
+		console.log("going forward");
+		iteration += 1;
+		// currentHistory += 1;
+		// disable redo if at end of history
+		if (iteration >= (history.length - 1)) redo.disabled = true;
+		// if (currentHistory >= (history.length - 2)) redo.disabled = true;
+		// enable undo if moving beyond very beginning
+		if (iteration >= 0) undo.disabled = false;
+		// if (currentHistory >= 0) undo.disabled = false;
+		// load point x,y for all points at currentHistory
+		removeMech(mechRemove.value);
+		mechFromArr(history[iteration], mechRemove.value);
+		// mechFromArr(history[currentHistory+1], mechRemove.value);
+		drawPoints(); 
+		updateTable();
+	}
+}
 
 function removePoint(pointLabel) {
 	pointsArr.forEach((pnt, ind, obj) => {
@@ -930,6 +1043,7 @@ function removeMech(name = 'default') {
 	// get index in pointsArr (because it is changing)
 	pointsArr.forEach((point, index, obj) => {
 		if (point.mechName === name) {
+			console.log("removing mech point");
 			delete arms[point.aArm];
 			delete arms[point.bArm];
 			if (point.type === "rotor") {
@@ -948,6 +1062,8 @@ function removeMech(name = 'default') {
 				});
 			}
 			obj[index] = null;
+		} else {
+			console.log("point.mechName:", point.mechName, "name:", name);
 		}
 	});
 	deletePointsArrNulls();
@@ -974,23 +1090,23 @@ function deletePointsArrNulls() {
 function loadMech(e) {
 	let name = e.srcElement[e.srcElement.selectedIndex].value;
 	console.log(name);
-	mechFromArr(name);
+	mechFromArr(JSON.parse(savedMechs[name]), name);
+	addToHistory();
 	enableRemoveMechButton(name);
 }
 
-function mechFromArr(name) {
-	let newMech = JSON.parse(savedMechs[name]);
+function mechFromArr(newMech, name) {
 	let mechs = [];
 	// Create poins
 	newMech.forEach(mech => {
 		let pnt = addPoint(mech.x, mech.y, mech.type, name);
 		mechs.push(pnt.label);
 		if (mech.a != null && mech.a < mechs.length) {
-			//console.log("mech.a:", mech.a);
+			console.log(pnt.label, "mech.a:", mech.a);
 			addArm(pointsArr[mech.a], pnt);
 		}
 		if (mech.b != null && mech.b < mechs.length) {
-			//console.log("mech.b:", mech.b);
+			console.log(pnt.label, "mech.b:", mech.b);
 			addArm(pointsArr[mech.b], pnt);
 		}
 		if (mech.type === 'rotor') {
@@ -1003,8 +1119,43 @@ function mechFromArr(name) {
 	updateTable();
 }
 
+// Every UI action should add to history as "current state"
+// Without htting undo or redo, history[n] (where n = latest iteration) will always equal what is displayed
+// Then n is just a pointer to where we are in history and should always equal what is displayed
+// So - add mech -> add to history; add fixed point -> add to history; move point -> add to history
+function addToHistory() {
+	let histPointsArr = saveMech();
+	// enable back button when first history added
+	if (iteration < 0) {
+	// if (currentHistory < 0) {
+		document.getElementById('history').style.display='block';
+		undo.disabled = false;
+	}
+	console.log("before adding to history");
+	console.log("iteration: ", iteration, "hist len:", history.length);
+	// console.log("currenthistory: ", currentHistory, "hist len:", history.length);
+	iteration += 1;
+	// currentHistory += 1;
+	if (iteration === history.length) {
+	// if (currentHistory === history.length) {
+		console.log("already at end of history; can add");
+		history.push(histPointsArr);
+	} else if (iteration > history.length) {
+	// } else if (currentHistory > history.length) {
+		console.log("curr hist is out of sync! > len of history");
+	} else {
+		console.log("iteration < hist len. Means adding to middle of history. Thus creating a new branch")
+		// console.log("current history < hist len. Means adding to middle of history. THus creating a new branch")
+		let removed = history.splice(iteration);
+		// let removed = history.splice(currentHistory);
+		console.log("removed", removed.length, "items from history");
+		history.push(histPointsArr);
+		// at end of history
+		redo.disabled = true;
+	}
+}
 
-function saveMech() {
+function saveMech(asJSON = false) {
 	let savedMech = [];
 	pointsArr.forEach(point => {
 		let pnt = {};
@@ -1014,8 +1165,12 @@ function saveMech() {
 		pnt['b'] = point.b ? point.b.label : null;
 		pnt['type'] = point.type;
 		pnt['rotateFrom'] = point.rotateFrom ? point.rotateFrom.label : null;
+		pnt['mechName'] = point.mechName ? point.mechName: null;
 		savedMech.push(pnt);
 	});
-	return JSON.stringify(savedMech);
+	if (asJSON) {
+		return JSON.stringify(savedMech);
+	} else {
+		return savedMech;
+	}
 }
-

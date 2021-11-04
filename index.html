@@ -1,23 +1,32 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="utf-8">
-	<meta name="description" content="A simple tool to create mechanical linkages and simulate them. Includes tracking paths of arms and pre-made linkages such as Jansen.">
+
+<head>
+	<meta charset="utf-8">
+	<meta name="description"
+		content="A simple tool to create mechanical linkages and simulate them. Includes tracking paths of arms and pre-made linkages such as Jansen.">
 	<meta name="robots" content="index, follow">
 	<meta name="keywords" content="linkages, mechanical, mechanisms, jensen, mechanical linkages">
-    <title>Mechanical Linkages Simulator</title>
+	<title>Mechanical Linkages Simulator</title>
 	<style>
 		body {
 			margin: 0;
 			font-family: courier;
 		}
-		table, tr, th, td {
+
+		table,
+		tr,
+		th,
+		td {
 			border: 1px solid grey;
 			border-collapse: collapse;
 		}
-		th, td {
+
+		th,
+		td {
 			padding: 3px 5px 3px 5px;
 		}
+
 		button.depressed {
 			background-color: #fafafa;
 			border-style: inset;
@@ -25,7 +34,8 @@
 			border-width: thin;
 			padding-top: 2px;
 			padding-bottom: 2px;
-			}
+		}
+
 		button.unpressed {
 			background-color: #efefef;
 			border-style: outset;
@@ -35,82 +45,93 @@
 			padding-bottom: 2px;
 		}
 	</style>
-  </head>
+</head>
 
-  <body>
-	  <div style="float: left; width: 100%; background-color: #e6e6e6;">
-		  <p style="float: left; width: 100%; text-align: center; font-size: 24pt; margin: 10px;">
-		  	Mechanical Linkage Simulator
-		  </p>
-		  <p style="float: left; width: 100%; text-align: center;">
-			  From simple from 4-bar linkages to more complex mechanisms.
-		  </p>
-	  </div>
-	  <hr>
-	  <div style="float: left; width: 100%; margin: 5px;">
-		  <div style="float: left; width: 700px; margin-top: 0px;">
-			  <span style="float: left; width: 100%; margin-bottom: 10px; text-align: center; font-size: 16pt;">CREATE</span>
-			  <div style="float: left; width: 100%;">
-				  <div id="inputs" style="float: left;">
-					  <div id="addInputs" style="float: left;">
-						  <div class='pointInput' style="float: left; border: 1px;">Add:&nbsp;</div>
-						  <button id='fixed' class="unpressed">Fixed Point</button>
-						  <button id='rotor' class="unpressed">Rotor Arm</button>
-						  <button id='move' class="unpressed">Moving Arm</button>
-					  </div>
-				  </div>
-				  <div id="addMech" style="float: right; margin-right: 10px;">
-					  <span id="mechsLabel" style="float: left; margin-left: 5px;">Add linkage:</span>
-					  <select name="mechs" id="mechs" style="float: left; margin-left: 5px;">
-						  <option value="">Choose...</option>
-					  </select>
-					  <button id="remove" style="float: left; margin-left: 5px; display: none">Remove</button>
-				  </div>
-			  </div>
-			  <div id="inst" style="float: left; width: 100%; margin-top: 10px; margin-bottom: 10px;">Add a Fixed Point to get started. Or choose from an existing linkage.</div>
-		  </div>
-		  <div style="float: left; margin-top: 0px; margin-left: 30px;">
-			  <span style="float: left; width: 100%; margin-bottom: 10px; text-align: center; font-size: 16pt;">RUN</span>
-			  <button id="run">Run</button>
-			  <button id="restart">Reset</button>
-			  <button id="tick">Tick</button>
-			  <input type="text" id="deg" style="width: 30px;"> Degrees
-		  </div>
-	  </div>
-	  <div style="float: left; width: 100%; margin: 5px;">
-		  <canvas id="mech" width=700 height=700 style="border: 1px solid black; margin-top: 5px; float:left;">
-			  Some starting text
-		  </canvas>
-		  <div id='output' style="float: left; margin-left: 30px; width: 500px;">
-			  <strong>Status:</strong>
-			  <div id='status' style="float: left; width: 100%;"></div>
-			  <br><br><br>
-			  <div id='points' style="float: left; width: 100%;">
-				  <table id='table'>
-					  <tr>
-						  <th>Label</th>
-						  <th>X</th>
-						  <th>Y</th>
-						  <th>Type</th>
-						  <th>Arm 1</th>
-						  <th>Arm 2</th>
-						  <th>Path</th>
-						  <th>Delete</th>
-					  </tr>
-				  </table>
-			  </div>
-		  </div>
-		  <div id='video' style="float: left; margin-left: 30px; margin-top: 30px;">
-			  <hr>
-			  <span style="float: left; width: 100%; text-align: center; font-size: 16pt;">HOW TO</span>
-			  <br>
-			  <video width=600 controls style="float: left;" src='media/mechlinkages_how_to.mp4' type='video/mp4' poster='media/video_poster.png'>
-				  Your browser doesn't support HTML5 video.
-			  </video>
-		  </div>
-		  <div id='pos' style="float: left; width:100%;">Mouse position</div>
-	  </div>
-  </body>
+<body>
+	<div style="float: left; width: 100%; background-color: #e6e6e6;">
+		<p style="float: left; width: 100%; text-align: center; font-size: 24pt; margin: 10px;">
+			Mechanical Linkage Simulator
+		</p>
+		<p style="float: left; width: 100%; text-align: center;">
+			From simple from 4-bar linkages to more complex mechanisms.
+		</p>
+	</div>
+	<hr>
+	<div style="float: left; width: 100%; margin: 5px;">
+		<div style="float: left; width: 700px; margin-top: 0px;">
+			<span
+				style="float: left; width: 100%; margin-bottom: 10px; text-align: center; font-size: 16pt;">CREATE</span>
+			<div style="float: left; width: 100%;">
+				<div id="inputs" style="float: left;">
+					<div id="addInputs" style="float: left;">
+						<div class='pointInput' style="float: left; border: 1px;">Add:&nbsp;</div>
+						<button id='fixed' class="unpressed">Fixed Point</button>
+						<button id='rotor' class="unpressed">Rotor Arm</button>
+						<button id='move' class="unpressed">Moving Arm</button>
+					</div>
+					<div id="history" style="float: left; margin-left: 10px; display: none">
+						|
+						<button id='undo' class="unpressed" disabled>Undo</button>
+						<button id='redo' class="unpressed" disabled>Redo</button>
+					</div>
+				</div>
+				<div id="addMech" style="float: right; margin-right: 10px;">
+					<span id="mechsLabel" style="float: left; margin-left: 5px;">Add linkage:</span>
+					<select name="mechs" id="mechs" style="float: left; margin-left: 5px;">
+						<option value="">Choose...</option>
+					</select>
+					<button id="remove" style="float: left; margin-left: 5px; display: none">Remove</button>
+				</div>
+			</div>
+			<div id="inst" style="float: left; width: 100%; margin-top: 10px; margin-bottom: 10px;">Add a Fixed Point to
+				get started. Or choose from an existing linkage.</div>
+		</div>
+		<div style="float: left; margin-top: 0px; margin-left: 30px;">
+			<span style="float: left; width: 100%; margin-bottom: 10px; text-align: center; font-size: 16pt;">RUN</span>
+			<button id="run">Run</button>
+			<input type="text" id="speed" style="width: 30px;"> deg / sec
+			<button id="restart">Reset</button>
+			<button id="tick">Tick</button>
+			<input type="text" id="deg" style="width: 30px;"> Degrees
+		</div>
+	</div>
+	<div style="float: left; width: 100%; margin: 5px;">
+		<canvas id="mech" width=700 height=700 style="border: 1px solid black; margin-top: 5px; float:left;">
+			Some starting text
+		</canvas>
+		<div id='output' style="float: left; margin-left: 30px; width: 500px;">
+			<strong>Status:</strong>
+			<div id='status' style="float: left; width: 100%;"></div>
+			<br><br><br>
+			<div id='points' style="float: left; width: 100%;">
+				<table id='table'>
+					<tr>
+						<th>#</th>
+						<th>X</th>
+						<th>Y</th>
+						<th>Type</th>
+						<th>Arm 1</th>
+						<th>Arm 2</th>
+						<th>Path</th>
+						<th>Edit</th>
+					</tr>
+				</table>
+			</div>
+		</div>
+		<div id='video' style="float: left; margin-left: 30px; margin-top: 30px;">
+			<hr>
+			<span style="float: left; width: 100%; text-align: center; font-size: 16pt;">HOW TO</span>
+			<br>
+			<video width=600 controls style="float: left;" src='media/mechlinkages_how_to.mp4' type='video/mp4'
+				poster='media/video_poster.png'>
+				Your browser doesn't support HTML5 video.
+			</video>
+		</div>
+		<div id='pos' style="float: left;">Mouse position</div>
+		<div id='len' style="float: left;"></div>
+	</div>
+</body>
 
-    <script src='js/linkages.js'></script>
+<script src='js/linkages.js'></script>
+
 </html>
