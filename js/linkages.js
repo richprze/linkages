@@ -1,3 +1,14 @@
+/********************* 
+ * TODO:
+ * 	[] Allow for more than 2 arms
+ * 	[] Allow for extended arm where point intersects in middle and not at end
+ *  [] If > 2 arms, make sure the arms that determine location of point are in a and b (reshuffle if not)
+ *  [] Allow for editing arm length
+ *  [] Allow for multiple rotor arms
+ *  [] Allow for extended rotor arm
+ * 		- OR, allow for multiple rotor arms, but define degree separation.
+ * 		- E.g., An extend motor arm is the same as 2 motor arms with equal length 180 deg apart
+*********************/
 function vectorLen(a, b) {
 	return ((b.x-a.x)**2+(b.y-a.y)**2)**.5;
 }
@@ -31,11 +42,6 @@ class Point {
 		this.y = this.startY;
 	};
 
-	// Run through a full 360 rotation and count if there are any errors (dy == NaN)
-	// Then provide feedback that point (and arms?) are impossible
-	findError() {
-	}
-
 	calcThings() {
 		this.d = vectorLen(this.a, this.b);
 		this.dx = (arms[this.aArm].len**2 + this.d**2 - arms[this.bArm].len**2) / (2 * this.d);
@@ -66,9 +72,14 @@ class Point {
 
 		if (this.dir === null) {
 			if (this.x.toPrecision(7) === this.pnt90.x.toPrecision(7) && this.y.toPrecision(7) === this.pnt90.y.toPrecision(7)) {
+				console.log("null dir is now 90");
 				this.dir = 90;
 				this.pnt = this.pnt90;
+				if (this.x.toPrecision(7) === this.pnt270.x.toPrecision(7) && this.y.toPrecision(7) === this.pnt270.y.toPrecision(7)) {
+					console.log("and ALSO 270");
+				}
 			} else if (this.x.toPrecision(7) === this.pnt270.x.toPrecision(7) && this.y.toPrecision(7) === this.pnt270.y.toPrecision(7)) {
+				console.log("null dir is now 270");
 				this.dir = 270;
 				this.pnt = this.pnt270;
 			} else {
@@ -351,7 +362,7 @@ function tick(deg, draw = true) {
 }
 
 function try360() {
-	let error = false;
+	if (pointsArr.length >= 5) console.log("Top of try360 Pnt 4: ", pointsArr[4].x, pointsArr[4].y);
 	let errors = new Set();
 	let i = 0;
 	while (i < 360) {
@@ -364,7 +375,6 @@ function try360() {
 	}
 	console.log("Check: " + i + " ticks run");
 	console.log(errors);
-	//if (error) {
 	if (errors.size > 0) {
 		console.log("ERROR when checking. Points with fail: " + [...errors].join());
 		sys.errorPoints = [...errors];
@@ -375,6 +385,16 @@ function try360() {
 	} else {
 		console.log("Check -> no errors");
 		sys.errorPoints = [];
+		// try360 may MOVE the points from where originally set especially if not a complete answer.
+		if (pointsArr.length >= 5) console.log("End of try360 Pnt 4: ", pointsArr[4].x, pointsArr[4].y);
+		// Compare points if points after 360 rotation are different than original, then mech has a non-deterministic joint
+		// TODO: count # differences and if > 0 return ERROR
+		for (i=0; i < pointsArr.length; i++) {
+			if (Math.round(pointsArr[i].x) != Math.round(history[iteration][i].x)) console.log("pnt ", i, "x does not match");
+			if (Math.round(pointsArr[i].y) != Math.round(history[iteration][i].y)) console.log("pnt ", i, "x does not match");
+		}
+		removeMech(mechRemove.value);
+		mechFromArr(history[iteration], mechRemove.value);
 	}
 }
 
@@ -621,13 +641,13 @@ function finishAdding() {
 			}
 		}
 	});
+	drawPoints();
+	updateTable();
 	if (sys.errorPoints.length === 0) {
 		console.log("trying 360");
 		// handle error better 
 		try360();
 	}
-	drawPoints();
-	updateTable();
 }
 
 function enableRemoveMechButton(name = 'default') {
@@ -704,12 +724,13 @@ canvas.addEventListener('mousemove', e => {
 		if (point === null) {
 			if (sys.hoverPoint.point != null) { // if (sys.hover) ???
 				updateStatus('hoverPoint', {'point': null});
+				console.log("point is null and hoverPoint != null");
 				drawPoints();
 			} else {
 				return true;
 			}
 		} else {
-			//console.log("IN", point.label);
+			console.log("IN", point.label);
 			updateStatus('hoverPoint', {'point': point.label});
 			drawPoints();
 		}
@@ -717,7 +738,7 @@ canvas.addEventListener('mousemove', e => {
 });
 
 canvas.addEventListener('click', function(e) {
-	console.log('click');
+	// console.log('click');
 	let click = {'x': e.clientX - canvasRect.x, 'y': canvas.height - (e.clientY - canvasRect.y)};
 	let point = coordsInPoint(click);
 	let type = null;
@@ -728,7 +749,8 @@ canvas.addEventListener('click', function(e) {
 			// type = 'fixed';
 			if (point === null) {
 				console.log("in fixed");
-				addPoint(click.x, click.y, type, 'default');
+				let name = mechRemove.value === '' ? 'default' : mechRemove.value;
+				addPoint(click.x, click.y, type, name);
 				addToHistory();
 				drawPoints();
 				updateStatus('status', {'stopped': true});
@@ -740,7 +762,8 @@ canvas.addEventListener('click', function(e) {
 				console.log("adding arm 1st point");
 				if (point === null) {
 					// add point
-					armFirstPoint.point = addPoint(click.x, click.y, type, 'default');
+					let name = mechRemove.value === '' ? 'default' : mechRemove.value;
+					armFirstPoint.point = addPoint(click.x, click.y, type, name);
 					armFirstPoint.existing = false;
 				} else if (!(point.type === 'move' && type === 'rotor')) {
 					console.log("IN", point.label, point.type);
@@ -760,7 +783,8 @@ canvas.addEventListener('click', function(e) {
 					console.log("adding to null point");
 					if (!(armFirstPoint.point.type === 'move' && type === 'rotor')) {
 						if (armFirstPoint.existing) {
-							point = addPoint(click.x, click.y, type, 'default');
+							let name = mechRemove.value === '' ? 'default' : mechRemove.value;
+							point = addPoint(click.x, click.y, type, name);
 						} else {
 							console.log("can't add null to null");
 						}
@@ -773,7 +797,6 @@ canvas.addEventListener('click', function(e) {
 					return false;
 				} else {
 					console.log("adding 2nd point to exisitng point");
-					console.log(point);
 				}
 
 				if (type === 'rotor') {
@@ -1102,11 +1125,9 @@ function mechFromArr(newMech, name) {
 		let pnt = addPoint(mech.x, mech.y, mech.type, name);
 		mechs.push(pnt.label);
 		if (mech.a != null && mech.a < mechs.length) {
-			console.log(pnt.label, "mech.a:", mech.a);
 			addArm(pointsArr[mech.a], pnt);
 		}
 		if (mech.b != null && mech.b < mechs.length) {
-			console.log(pnt.label, "mech.b:", mech.b);
 			addArm(pointsArr[mech.b], pnt);
 		}
 		if (mech.type === 'rotor') {
@@ -1127,27 +1148,18 @@ function addToHistory() {
 	let histPointsArr = saveMech();
 	// enable back button when first history added
 	if (iteration < 0) {
-	// if (currentHistory < 0) {
 		document.getElementById('history').style.display='block';
 		undo.disabled = false;
 	}
-	console.log("before adding to history");
-	console.log("iteration: ", iteration, "hist len:", history.length);
-	// console.log("currenthistory: ", currentHistory, "hist len:", history.length);
 	iteration += 1;
-	// currentHistory += 1;
 	if (iteration === history.length) {
-	// if (currentHistory === history.length) {
 		console.log("already at end of history; can add");
 		history.push(histPointsArr);
 	} else if (iteration > history.length) {
-	// } else if (currentHistory > history.length) {
 		console.log("curr hist is out of sync! > len of history");
 	} else {
 		console.log("iteration < hist len. Means adding to middle of history. Thus creating a new branch")
-		// console.log("current history < hist len. Means adding to middle of history. THus creating a new branch")
 		let removed = history.splice(iteration);
-		// let removed = history.splice(currentHistory);
 		console.log("removed", removed.length, "items from history");
 		history.push(histPointsArr);
 		// at end of history
