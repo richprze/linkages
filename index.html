@@ -96,9 +96,13 @@
 		</div>
 	</div>
 	<div style="float: left; width: 100%; margin: 5px;">
-		<canvas id="mech" width=700 height=700 style="border: 1px solid black; margin-top: 5px; float:left;">
-			Some starting text
-		</canvas>
+		<div id="mech_canvs" style="float: left; width: 700px; height: 700px;">
+			<canvas id="mech" width=700 height=700 style="width: 100%; border: 1px solid black; margin-top: 5px; float:left;">
+				Some starting text
+			</canvas>
+			<div id='pos' style="float: left;">Mouse position</div>
+			<div id='len' style="float: left;"></div>
+		</div>
 		<div id='output' style="float: left; margin-left: 30px; width: 500px;">
 			<strong>Status:</strong>
 			<div id='status' style="float: left; width: 100%;"></div>
@@ -120,15 +124,13 @@
 		</div>
 		<div id='video' style="float: left; margin-left: 30px; margin-top: 30px;">
 			<hr>
-			<span style="float: left; width: 100%; text-align: center; font-size: 16pt;">HOW TO</span>
+			<span style="float: left; width: 100%; text-align: center; font-size: 16pt;">HOW TO <span style="font-size: 11pt;"><a href="mailto:mechlinkages@gmail.com?subject=Mech Linkages Feedback or Question">Send feedback or Qs</a></span></span>
 			<br>
 			<video width=600 controls style="float: left;" src='media/mechlinkages_how_to.mp4' type='video/mp4'
 				poster='media/video_poster.png'>
 				Your browser doesn't support HTML5 video.
 			</video>
 		</div>
-		<div id='pos' style="float: left;">Mouse position</div>
-		<div id='len' style="float: left;"></div>
 	</div>
 </body>
 
